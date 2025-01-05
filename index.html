@@ -36,6 +36,9 @@
 </thead>
 
 
+<tbody>
+
+
 <tr>
 
 
@@ -10847,7 +10850,7 @@
 <tr>
 
 
-<td><a href='songs/00795.txt' target='_blank'>এখন আর দেরি নয়, ধরা্‌ গো তোরা হাতে হাতে ধরা্‌ গো।</a></td>
+<td><a href='songs/00795.txt' target='_blank'>এখন আর দেরি নয়, ধর্ গো তোরা হাতে হাতে ধর্ গো।</a></td>
     <td>স্বদেশ</td>
     <td>স্বদেশ</td>
     <td>32</td>
@@ -31900,6 +31903,25 @@
 </tr>
 
 
+</tbody>
+
+
+<tfoot>
+<tr>
+
+
+    <th>Search</th>
+    <th>Search</th>
+    <th>Search</th>
+    <th>Search</th>
+    <th>Search</th>
+    <th>Search</th>
+    <th>Search</th>
+    <th>Search</th>
+</tr>
+</tfoot>
+
+
 </table>
 
 
@@ -31931,8 +31953,33 @@
 $(document).ready(function() {
     $('#songtable').DataTable({
 	'paging': false,
-	'order': [[ 4, 'asc' ], [ 5, 'asc' ]]
+
+         initComplete: function () {
+           this.api()
+             .columns()
+             .every(function () {
+                let column = this;
+                let title = column.footer().textContent;
+ 
+                // Create input element
+                let input = document.createElement('input');
+                input.placeholder = title;
+                input.style.width = column.header().style.width;
+                input.style.minWidth = '75px';
+                column.footer().replaceChildren(input);
+ 
+                // Event listener for user input
+                input.addEventListener('keyup', () => {
+                    if (column.search() !== this.value) {
+                        column.search(input.value).draw();
+                    }
+                });
+             });
+         },
+
+	'order': [[ 1, 'asc' ], [ 3, 'asc' ]]
     });
+    $('#songtable tfoot tr').appendTo('#songtable thead');
 } );
 
 </script>

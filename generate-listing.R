@@ -53,6 +53,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
     fwrite0("    <th>", "প্রথম ছত্র", "</th>")
     for (n in bncolnames) fwrite0("    <th>", n, "</th>")
     fwrite("</tr>", "</thead>")
+    fwrite("<tbody>")
 
     ## data
     for (i in seq_len(nrow(s)))
@@ -63,6 +64,12 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
         for (n in colnames) fwrite0("    <td>", s[[n]][i], "</td>")
         fwrite("</tr>")
     }
+
+    fwrite("</tbody>")
+    fwrite("<tfoot>", "<tr>")
+    fwrite0("    <th>", "Search", "</th>")
+    for (n in bncolnames) fwrite0("    <th>", "Search", "</th>")
+    fwrite("</tr>", "</tfoot>")
 
     fwrite("</table>")
     fwrite("</div>")
@@ -91,8 +98,33 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 $(document).ready(function() {
     $('#songtable').DataTable({
 	'paging': false,
-	'order': [[ 4, 'asc' ], [ 5, 'asc' ]]
+
+         initComplete: function () {
+           this.api()
+             .columns()
+             .every(function () {
+                let column = this;
+                let title = column.footer().textContent;
+ 
+                // Create input element
+                let input = document.createElement('input');
+                input.placeholder = title;
+                input.style.width = column.header().style.width;
+                input.style.minWidth = '75px';
+                column.footer().replaceChildren(input);
+ 
+                // Event listener for user input
+                input.addEventListener('keyup', () => {
+                    if (column.search() !== this.value) {
+                        column.search(input.value).draw();
+                    }
+                });
+             });
+         },
+
+	'order': [[ 1, 'asc' ], [ 3, 'asc' ]]
     });
+    $('#songtable tfoot tr').appendTo('#songtable thead');
 } );
 
 </script>
