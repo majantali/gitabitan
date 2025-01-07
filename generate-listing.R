@@ -47,7 +47,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "<link rel='stylesheet' href='https://fonts.googleapis.com/earlyaccess/notosansbengali.css' >",
            "<style>",
            "  body { font-family: 'Noto Sans Bengali', 'Noto Serif'; padding-top: 10px; }",
-           "  #songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: 'pre'; }",
+           "  #songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: pre; }",
            "  .songtitle { color: rgb(100, 100, 255); cursor: pointer; }",
            "</style>",
            "</head>",
