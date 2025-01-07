@@ -45,7 +45,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "<link rel='stylesheet' href='https://fonts.googleapis.com/earlyaccess/notosansbengali.css' >",
            "<style>",
            "  body { font-family: 'Noto Sans Bengali', 'Noto Serif'; padding-top: 10px; }",
-           "  .songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; whitespace: pre; }",
+           "  .songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: pre; }",
            "  .songtitle { color: rgb(100, 100, 255); cursor: pointer; }",
            "</style>",
            "</head>",
@@ -65,9 +65,6 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 </ul>
 <div class='tab-content' id='myTabContent'>
   <div class='tab-pane fade' id='display' role='tabpanel' aria-labelledby='display-tab'>
-    <p><a href='#'>Download MIDI</a></p>
-    <p>OGG</p>
-    <p>porjaay: <span>Select song</span></p>
     <div id='songarea'>
     </div>
   </div>
@@ -166,7 +163,8 @@ var storedText;
 
 function done() {
     document.getElementById('songarea').textContent = storedText;
-    document.getElementById('display').show();
+    var dtab = document.getElementById('display-tab');
+    bootstrap.Tab.getInstance(dtab).show()
 }
 
 function displaySong(id) {
