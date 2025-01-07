@@ -30,7 +30,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 
     ## HREF <- sprintf("<a href='songs/%s.txt' target='_blank'>%s</a>", s[["id"]], s[[NAME]])
 
-    HREF <- sprintf("<span class='songtitle' onclick='displaySong(\"%s\")'>%s</span>", s[["id"]], s[[NAME]])
+    HREF <- sprintf("<span class='songtitle' onclick='displaySong(\"%s\", \"%s\", %d)'>%s</span>", s[["id"]], s[["porjaay"]], s[["number"]], s[[NAME]])
 
     fwrite  <- function(...) cat(..., "\n", file = file, append = append, sep = "\n")
     fwrite0 <- function(...) cat(..., "\n", file = file, append = append, sep = "")
@@ -84,7 +84,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 
 
 <div class='modal fade' id='songModal' tabindex='-1' aria-labelledby='songModalLabel' aria-hidden='true'>
-  <div class='modal-dialog modal-dialog-scrollable modal-dialog-centered modal-lg'>
+  <div class='modal-dialog modal-dialog-scrollable modal-lg'>
     <div class='modal-content'>
       <div class='modal-header'>
         <h1 class='modal-title fs-5' id='songModalLabel'>Song</h1>
@@ -155,7 +155,8 @@ function done() {
     $('#songModal').modal('show');
 }
 
-function displaySong(id) {
+function displaySong(id, porjay, number) {
+    document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
     var url = 'songs/' + id + '.txt';
     fetch(url)
       .then(function(response) {
