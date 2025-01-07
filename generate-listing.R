@@ -30,7 +30,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 
     ## HREF <- sprintf("<a href='songs/%s.txt' target='_blank'>%s</a>", s[["id"]], s[[NAME]])
 
-    HREF <- sprintf("<span class='songtitle' data-bs-toggle='modal'data-bs-target='#songModal' onclick='displaySong(\"%s\")'>%s</span>", s[["id"]], s[[NAME]])
+    HREF <- sprintf("<span class='songtitle' onclick='displaySong(\"%s\")'>%s</span>", s[["id"]], s[[NAME]])
 
     fwrite  <- function(...) cat(..., "\n", file = file, append = append, sep = "\n")
     fwrite0 <- function(...) cat(..., "\n", file = file, append = append, sep = "")
@@ -152,6 +152,7 @@ var storedText;
 
 function done() {
     document.getElementById('songarea').textContent = storedText;
+    $('#songModal').modal('show');
 }
 
 function displaySong(id) {
