@@ -74,10 +74,10 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
     }
 
     fwrite("</tbody>")
-    fwrite("<tfoot>", "<tr>")
-    fwrite0("    <th>", "Search", "</th>")
-    for (n in bncolnames) fwrite0("    <th>", "Search", "</th>")
-    fwrite("</tr>", "</tfoot>")
+    ## fwrite("<tfoot>", "<tr>")
+    ## fwrite0("    <th>", "Search", "</th>")
+    ## for (n in bncolnames) fwrite0("    <th>", "Search", "</th>")
+    ## fwrite("</tr>", "</tfoot>")
 
     fwrite("</table>")
     fwrite("
@@ -117,34 +117,8 @@ $(document).ready(function() {
     $('#songtable').DataTable({
 	 paging: false,
          fixedHeader: true,
-
-         initComplete: function () { // column-wise search
-           this.api()
-             .columns()
-             .every(function () {
-                let column = this;
-                let title = column.footer().textContent;
- 
-                // Create input element
-                let input = document.createElement('input');
-                input.placeholder = title;
-                // input.style.width = column.header().style.width;
-                // input.style.minWidth = '75px';
-                input.style.width = '75px';
-                column.footer().replaceChildren(input);
- 
-                // Event listener for user input
-                input.addEventListener('keyup', () => {
-                    if (column.search() !== this.value) {
-                        column.search(input.value).draw();
-                    }
-                });
-             });
-         },
-
-	'order': [[ 1, 'asc' ], [ 3, 'asc' ]]
+	 order: [[ 1, 'asc' ], [ 3, 'asc' ]]
     });
-    $('#songtable tfoot tr').appendTo('#songtable thead');
 } );
 
 
