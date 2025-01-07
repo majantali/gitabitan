@@ -30,7 +30,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 
     ## HREF <- sprintf("<a href='songs/%s.txt' target='_blank'>%s</a>", s[["id"]], s[[NAME]])
 
-    HREF <- sprintf("<span class='songtitle' onclick='displaySong(\"%s\")'>%s</span>", s[["id"]], s[[NAME]])
+    HREF <- sprintf("<span class='songtitle' data-bs-toggle='modal'data-bs-target='#songModal' onclick='displaySong(\"%s\")'>%s</span>", s[["id"]], s[[NAME]])
 
     fwrite  <- function(...) cat(..., "\n", file = file, append = append, sep = "\n")
     fwrite0 <- function(...) cat(..., "\n", file = file, append = append, sep = "")
@@ -47,7 +47,7 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "<link rel='stylesheet' href='https://fonts.googleapis.com/earlyaccess/notosansbengali.css' >",
            "<style>",
            "  body { font-family: 'Noto Sans Bengali', 'Noto Serif'; padding-top: 10px; }",
-           "  #songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: pre; }",
+           "  #songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: pre; padding: 10px; }",
            "  .songtitle { color: rgb(100, 100, 255); cursor: pointer; }",
            "</style>",
            "</head>",
@@ -55,27 +55,6 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "<div class='container'>",
            "<h1>গীতবিতান</h1>")
 
-    fwrite("
-
-<ul class='nav nav-tabs' id='myTab' role='tablist'>
-  <li class='nav-item' role='presentation'>
-    <button class='nav-link active' id='songlist-tab' data-bs-toggle='tab' data-bs-target='#songlist' type='button' role='tab' aria-controls='songlist' aria-selected='true'>TOC</button>
-  </li>
-  <li class='nav-item' role='presentation'>
-    <button class='nav-link' id='display-tab' data-bs-toggle='tab' data-bs-target='#display' type='button' role='tab' aria-controls='display' aria-selected='false'>Display</button>
-  </li>
-</ul>
-<div class='tab-content' id='myTabContent'>
-  <div class='tab-pane fade' id='display' role='tabpanel' aria-labelledby='display-tab'>
-    <div id='songarea'>
-    </div>
-  </div>
-  <div class='tab-pane fade show active' id='songlist' role='tabpanel' aria-labelledby='songlist-tab'>
-
-")
-
-
-    
     fwrite("<table class='table table-striped table-bordered' id='songtable'>")
     ## table header
     fwrite("<thead>", "<tr>")
@@ -104,8 +83,28 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
     fwrite("
 
 
+<div class='modal fade' id='songModal' tabindex='-1' aria-labelledby='songModalLabel' aria-hidden='true'>
+  <div class='modal-dialog modal-dialog-scrollable modal-dialog-centered modal-lg'>
+    <div class='modal-content'>
+      <div class='modal-header'>
+        <h1 class='modal-title fs-5' id='songModalLabel'>Song</h1>
+        <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
+      </div>
+      <div class='modal-body'>
+        <div id='songarea'>
+
+Selected song goes here
+
+        </div>
+      </div>
+      <div class='modal-footer'>
+        <button type='button' class='btn btn-primary' data-bs-dismiss='modal'>Close</button>
+      </div>
+    </div>
   </div>
-</div>  <!-- complete tab containing table of contents -->
+</div>
+
+
 
 </div> <!-- container -->
 
@@ -153,8 +152,6 @@ var storedText;
 
 function done() {
     document.getElementById('songarea').textContent = storedText;
-    var dtab = document.getElementById('display-tab');
-    bootstrap.Tab.getInstance(dtab).show()
 }
 
 function displaySong(id) {
