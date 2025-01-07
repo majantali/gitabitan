@@ -25,7 +25,10 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
     NAME <- "name"
     ## HREF <- sprintf("<a href='%s'>%s</a>", s[[URL]], s[[NAME]])
     ## OR use local text files (could further take name from first line)
-    HREF <- sprintf("<a href='songs/%s.txt' target='_blank'>%s</a>", s[["id"]], s[[NAME]])
+
+    ## HREF <- sprintf("<a href='songs/%s.txt' target='_blank'>%s</a>", s[["id"]], s[[NAME]])
+
+    HREF <- sprintf("<span class='songtitle' onclick='displaySong(\"%s\")'>%s</span>", s[["id"]], s[[NAME]])
 
     fwrite  <- function(...) cat(..., "\n", file = file, append = append, sep = "\n")
     fwrite0 <- function(...) cat(..., "\n", file = file, append = append, sep = "")
@@ -35,18 +38,45 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "<meta charset='utf-8' />",
            "<title>Gitabitan Song List</title>",
            "<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=yes' />",
-           "<link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css' integrity='sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh' crossorigin='anonymous' >",
+           "<link href='https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css' rel='stylesheet' integrity='sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC' crossorigin='anonymous'>",
            "<link rel='stylesheet' href='https://cdn.datatables.net/1.11.3/css/dataTables.bootstrap4.min.css' >",
            "<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Noto Serif' >",
            "<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Noto Sans' >",
            "<link rel='stylesheet' href='https://fonts.googleapis.com/earlyaccess/notosansbengali.css' >",
            "<style>",
            "  body { font-family: 'Noto Sans Bengali', 'Noto Serif'; padding-top: 10px; }",
+           "  .songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; whitespace: pre; }",
+           "  .songtitle { color: rgb(100, 100, 255); cursor: pointer; }",
            "</style>",
            "</head>",
            "<body>",
            "<div class='container'>",
            "<h1>গীতবিতান</h1>")
+
+    fwrite("
+
+<ul class='nav nav-tabs' id='myTab' role='tablist'>
+  <li class='nav-item' role='presentation'>
+    <button class='nav-link active' id='songlist-tab' data-bs-toggle='tab' data-bs-target='#songlist' type='button' role='tab' aria-controls='songlist' aria-selected='true'>TOC</button>
+  </li>
+  <li class='nav-item' role='presentation'>
+    <button class='nav-link' id='display-tab' data-bs-toggle='tab' data-bs-target='#display' type='button' role='tab' aria-controls='display' aria-selected='false'>Display</button>
+  </li>
+</ul>
+<div class='tab-content' id='myTabContent'>
+  <div class='tab-pane fade' id='display' role='tabpanel' aria-labelledby='display-tab'>
+    <p><a href='#'>Download MIDI</a></p>
+    <p>OGG</p>
+    <p>porjaay: <span>Select song</span></p>
+    <div id='songarea'>
+    </div>
+  </div>
+  <div class='tab-pane fade show active' id='songlist' role='tabpanel' aria-labelledby='songlist-tab'>
+
+")
+
+
+    
     fwrite("<table class='table table-striped table-bordered' id='songtable'>")
     ## table header
     fwrite("<thead>", "<tr>")
@@ -72,8 +102,13 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
     fwrite("</tr>", "</tfoot>")
 
     fwrite("</table>")
-    fwrite("</div>")
     fwrite("
+
+
+  </div>
+</div>  <!-- complete tab containing table of contents -->
+
+</div> <!-- container -->
 
 <script src='https://code.jquery.com/jquery-3.4.1.min.js'
 	integrity='sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo='
@@ -88,10 +123,9 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 	crossorigin='anonymous'>
 </script>
 
-<script src='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js'
-	integrity='sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6'
-	crossorigin='anonymous'>
-</script>
+<script src='https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js'
+        integrity='sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF'
+        crossorigin='anonymous'></script>
 
 <script type='text/javascript'>
 
@@ -126,6 +160,26 @@ $(document).ready(function() {
     });
     $('#songtable tfoot tr').appendTo('#songtable thead');
 } );
+
+
+var storedText;
+
+function done() {
+    document.getElementById('songarea').textContent = storedText;
+    document.getElementById('display').show();
+}
+
+function displaySong(id) {
+    var url = 'songs/' + id + '.txt';
+    fetch(url)
+      .then(function(response) {
+        response.text().then(function(text) {
+          storedText = text;
+          done();
+        });
+      });
+}
+
 
 </script>
 
