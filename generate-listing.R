@@ -117,7 +117,8 @@ $(document).ready(function() {
     $('#songtable').DataTable({
 	 paging: false,
          fixedHeader: true,
-	 order: [[ 1, 'asc' ], [ 3, 'asc' ]]
+	 // order: [[ 1, 'asc' ], [ 3, 'asc' ]]
+	 order: [[ 0, 'asc' ]]
     });
 } );
 
