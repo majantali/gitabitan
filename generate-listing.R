@@ -65,6 +65,13 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "<div class='container'>",
            "<h1>গীতবিতান</h1>")
 
+    fwrite("
+<div class='input-group'>
+  <input type='text' class='form-control' id='searchinput' placeholder='Search' aria-label='Search'>
+  <input type='text' class='form-control' id='search-bn' disabled readonly>
+</div>
+")
+    
     fwrite("<table class='table table-striped table-bordered' id='songtable'>")
     ## table header
     fwrite("<thead>", "<tr>")
@@ -124,48 +131,64 @@ Selected song goes here
 <script src='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js'></script>
 <script src='https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.2.0/fh-4.0.1/datatables.min.js'></script>
 
+
+<script type='text/javascript'
+	src='https://majantali.github.io/assets/scripts/bninput.js'>
+</script>
+
+  
 <script type='text/javascript'>
 
-$(document).ready(function() {
-    $('#songtable').DataTable({
-	 paging: false,
-         fixedHeader: true,
-	 // order: [[ 1, 'asc' ], [ 3, 'asc' ]]
-	 order: [[ 0, 'asc' ]]
-    });
-} );
+  var storedText;
+  var songTable;
 
-
-var storedText;
-
-function done() {
-    document.getElementById('songarea').textContent = storedText;
-    $('#songModal').modal('show');
-}
-
-function displaySong(id, porjay, number, notation) {
-    document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
-    if (notation) {
-      document.getElementById('notation').style.display = 'inline';
-      document.getElementById('noteogg').style.display = 'block';
-      document.getElementById('notecsv').href = 'https://github.com/majantali/gitabitan/blob/main/notation/' + id + '.csv';
-      document.getElementById('notemidi').href = 'midi/' + id + '.mid';
-      document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
-    }
-    else {
-      document.getElementById('notation').style.display = 'none';
-      document.getElementById('noteogg').style.display = 'none';
-    }
-
-    var url = 'songs/' + id + '.txt';
-    fetch(url)
-      .then(function(response) {
-        response.text().then(function(text) {
-          storedText = text;
-          done();
-        });
+  $(document).ready(function() {
+      songTable = $('#songtable').DataTable({
+	  paging: false,
+          fixedHeader: true,
+	  layout: {
+              topEnd: null
+          },
+	  // order: [[ 1, 'asc' ], [ 3, 'asc' ]]
+	  order: [[ 0, 'asc' ]]
       });
-}
+
+      $('#searchinput').on( 'keyup', function () {
+	  var bn = romanToBengali(this.value + ' ');
+	  $('#search-bn').val(bn);
+	  songTable.search( bn ).draw();
+      } );
+
+  } );
+
+  function done() {
+      document.getElementById('songarea').textContent = storedText;
+      $('#songModal').modal('show');
+  }
+
+  function displaySong(id, porjay, number, notation) {
+      document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
+      if (notation) {
+	  document.getElementById('notation').style.display = 'inline';
+	  document.getElementById('noteogg').style.display = 'block';
+	  document.getElementById('notecsv').href = 'https://github.com/majantali/gitabitan/blob/main/notation/' + id + '.csv';
+	  document.getElementById('notemidi').href = 'midi/' + id + '.mid';
+	  document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
+      }
+      else {
+	  document.getElementById('notation').style.display = 'none';
+	  document.getElementById('noteogg').style.display = 'none';
+      }
+
+      var url = 'songs/' + id + '.txt';
+      fetch(url)
+	  .then(function(response) {
+              response.text().then(function(text) {
+		  storedText = text;
+		  done();
+              });
+	  });
+  }
 
 
 </script>
