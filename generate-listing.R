@@ -13,6 +13,15 @@ getSongInfo <- function(file = "metadata.csv")
     d
 }
 
+getMIDIList <- function(dir = "midi")
+{
+    f <- list.files(dir)
+    f <- f[endsWith(f, ".mid")]
+    f <- gsub(".mid", "", f)
+    f
+}
+
+
 export2htmltable <- function(s, file = "", append = !(file == ""))
 {
     ## file and append are used by cat(), supply a connection for more efficient writing (?)
@@ -30,7 +39,8 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
 
     ## HREF <- sprintf("<a href='songs/%s.txt' target='_blank'>%s</a>", s[["id"]], s[[NAME]])
 
-    HREF <- sprintf("<span class='songtitle' onclick='displaySong(\"%s\", \"%s\", %d)'>%s</span>", s[["id"]], s[["porjaay"]], s[["number"]], s[[NAME]])
+    HREF <- sprintf("<span class='songtitle' onclick='displaySong(\"%s\", \"%s\", %d, %s)'>%s</span>",
+                    s[["id"]], s[["porjaay"]], s[["number"]], ifelse(s[["notationOK"]], "true", "false"), s[[NAME]])
 
     fwrite  <- function(...) cat(..., "\n", file = file, append = append, sep = "\n")
     fwrite0 <- function(...) cat(..., "\n", file = file, append = append, sep = "")
@@ -82,7 +92,6 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
     fwrite("</table>")
     fwrite("
 
-
 <div class='modal fade' id='songModal' tabindex='-1' aria-labelledby='songModalLabel' aria-hidden='true'>
   <div class='modal-dialog modal-dialog-scrollable modal-lg'>
     <div class='modal-content'>
@@ -98,6 +107,10 @@ Selected song goes here
         </div>
       </div>
       <div class='modal-footer'>
+	<audio id='noteogg' class='me-auto' controls src=''></audio>
+	<div id='notation'>Notation: 
+	    <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
+        </div>
         <button type='button' class='btn btn-primary' data-bs-dismiss='modal'>Close</button>
       </div>
     </div>
@@ -130,8 +143,20 @@ function done() {
     $('#songModal').modal('show');
 }
 
-function displaySong(id, porjay, number) {
+function displaySong(id, porjay, number, notation) {
     document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
+    if (notation) {
+      document.getElementById('notation').style.display = 'inline';
+      document.getElementById('noteogg').style.display = 'block';
+      document.getElementById('notecsv').href = 'https://github.com/majantali/gitabitan/blob/main/notation/' + id + '.csv';
+      document.getElementById('notemidi').href = 'midi/' + id + '.mid';
+      document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
+    }
+    else {
+      document.getElementById('notation').style.display = 'none';
+      document.getElementById('noteogg').style.display = 'none';
+    }
+
     var url = 'songs/' + id + '.txt';
     fetch(url)
       .then(function(response) {
@@ -163,6 +188,7 @@ dtaal <- data.frame(s[m$id, c("name", "taal")], m = m$taal)
 subset(dtaal, !(startsWith(m, taal) | startsWith(taal, m))) |>
     write.csv("taal-mismatch.csv")
 
+s$notationOK <- s$id %in% getMIDIList()
 
 str(s)
 
