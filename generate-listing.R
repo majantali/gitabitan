@@ -140,9 +140,9 @@ Selected song goes here
 <script type='text/javascript'>
 
   var storedText;
-  var songTable;
 
   $(document).ready(function() {
+      var search, songTable;
       songTable = $('#songtable').DataTable({
 	  paging: false,
           fixedHeader: true,
@@ -153,10 +153,15 @@ Selected song goes here
 	  order: [[ 0, 'asc' ]]
       });
 
+      // search at most one per second
+      search = DataTable.util.debounce(function (val) {
+          songTable.search(val).draw();
+      }, 1000);
+
       $('#searchinput').on( 'keyup', function () {
 	  var bn = romanToBengali(this.value + ' ');
 	  $('#search-bn').val(bn);
-	  songTable.search( bn ).draw();
+	  search( bn );
       } );
 
   } );
