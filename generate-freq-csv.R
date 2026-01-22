@@ -1,5 +1,7 @@
 
 
+
+
 ## Load notation extracted in CSV format, and try to convert into
 ## another CSV file with notes / frquencies with the following
 ## columns:
@@ -30,7 +32,7 @@ fillByPrev <- function(x, which.pos = x < 0)
 ## sounds. For slurring we will use Legato and see how different
 ## synthesizers deal with that.
 
-
+library(midiator) # only for key_indian map
 
 
 ## note2events() handles one row in the original notation, producing
@@ -103,9 +105,6 @@ note2events <- function(notes, start, slur1, lyrics, meed, NOTE_DURATION)
 ## NOTE_DURATION <- 60L
 
 notation2freq <- function(id = "00032", notation_file = sprintf("notation/%s.csv", id),
-                          speed = 1,
-                          maxvol = 100,
-                          instrument = "sitar",
                           NOTE_DURATION = 60L,
                           RELEASE_OFFSET = 0L, # release offset when next note is slurred
                           file = sprintf("midi/%s.mid", id))
@@ -176,7 +175,27 @@ notation2freq <- function(id = "00032", notation_file = sprintf("notation/%s.csv
 
     noteCodes$keys <- fillByPrev(noteCodes$keys)
 
-    noteCodes
+    ## Convert to desired format with
+    
+    ## tstart  = time start
+    ## tend    = time end
+    ## kstart  = key at beginning (to be converted to frequency later)
+    ## kend    = key at end
+    ## newnote = whether a "new note" or continuation (slur) or previous note
+
+    ans <- 
+        with(noteCodes, 
+             data.frame(tstart = dstart, tend = dstop,
+                        kstart = keys, kend = keys,
+                        newnote = as.integer(!slur)))
+    
+    ## We still need to adjust 'kend' by changing it to the 'kstart'
+    ## of the next note if 'meed == 1'
+    if (noteCodes$meed[[nrow(noteCodes)]] == 1)
+        stop("A 'meed' must end by last note; please check input data")
+    wmeed <- which(noteCodes$meed == 1)
+    ans$kend[wmeed] <- ans$kstart[wmeed + 1]
+    ans
 }
 
 
@@ -187,15 +206,9 @@ options(warn = 1)
 if (FALSE)
 {
 
-    ## foo <- 
+    notation2freq("01177") |> head(30)
 
-    ## notation2midi("00052", instrument = "violin",
-    ##               maxvol = 120, speed = 1.2,
-    ##               file = "output.mid")
-
-
-    notation2midi("01177", instrument = "violin",
-                  maxvol = 120, speed = 0.8)
+    notation2freq("01071") |> with(kend - kstart)
 
     ## notation2midi("00004", instrument = "viola",
     ##               maxvol = 120, speed = 1.2,
@@ -211,9 +224,8 @@ if (FALSE)
     for (i in 1:3000) {
         id <- sprintf("%05d", i)
         print(id)
-        try(notation2midi(id, instrument = "violin",
-                          RELEASE_OFFSET = 10L,
-                          maxvol = 120, speed = 1.25))
+        outfile <- sprintf("frequency-duration/%s.csv", id)
+        try(notation2freq(id) |> write.csv(file = outfile))
     }
 
 }
