@@ -31937,6 +31937,7 @@ Selected song goes here
       </div>
       <div class='modal-footer'>
 	<audio id='noteogg' class='me-auto' controls src=''></audio>
+	<span onclck='play()'>Start</span>&nbsp;<span onclck='pause_aidio()'>Pause</span>&nbsp;<span onclck='resume_aidio()'>Resume</span>
 	<div id='notation'>Notation: 
 	    <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
         </div>
@@ -31962,6 +31963,7 @@ Selected song goes here
 <script type='text/javascript'>
 
   var storedText;
+  var currentID;
 
   $(document).ready(function() {
       var search, songTable;
@@ -31994,6 +31996,7 @@ Selected song goes here
   }
 
   function displaySong(id, porjay, number, notation) {
+      currentID = id;
       document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
       if (notation) {
 	  document.getElementById('notation').style.display = 'inline';
@@ -32017,7 +32020,14 @@ Selected song goes here
 	  });
   }
 
+</script>
 
+<script type="module">
+  import { play_audio } from './freq2tune.js';
+        
+  window.play = function() {
+      play_audio('./freqmap/' + currentID + '.csv', 'guitar');
+  };
 </script>
 
 
