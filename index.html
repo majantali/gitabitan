@@ -31937,7 +31937,7 @@ Selected song goes here
       </div>
       <div class='modal-footer'>
 	<audio id='noteogg' class='me-auto' controls src=''></audio>
-	<span onclck='play()'>Start</span>&nbsp;<span onclck='pause_aidio()'>Pause</span>&nbsp;<span onclck='resume_aidio()'>Resume</span>
+	<span onclick='aplay()'>Start</span>&nbsp;<span onclick='apause()'>Pause</span>&nbsp;<span onclick='aresume()'>Resume</span>
 	<div id='notation'>Notation: 
 	    <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
         </div>
@@ -32023,10 +32023,16 @@ Selected song goes here
 </script>
 
 <script type="module">
-  import { play_audio } from './freq2tune.js';
+  import { play_audio, pause_audio, resume_audio } from './freq2tune.js';
         
-  window.play = function() {
+  window.aplay = function() {
       play_audio('./freqmap/' + currentID + '.csv', 'guitar');
+  };
+  window.apause = function() {
+      pause_audio();
+  };
+  window.aresume = function() {
+      resume_audio();
   };
 </script>
 
