@@ -104,26 +104,15 @@ note2events <- function(notes, start, slur1, lyrics, meed, NOTE_DURATION)
 
 ## NOTE_DURATION <- 60L
 
-notation2freq <- function(id = "00032", notation_file = sprintf("notation/%s.csv", id),
-                          NOTE_DURATION = 60L,
-                          RELEASE_OFFSET = 0L, # release offset when next note is slurred
-                          file = sprintf("midi/%s.mid", id))
+notation2keys <- function(id = "00032",
+                          notation_file = sprintf("notation/%s.csv", id),
+                          NOTE_DURATION = 60L)
 {
     if (!file.exists(notation_file)) return(invisible())
     notation <- read.csv(notation_file, 
                          colClasses = "character")
 
     ## 'notes' is a vector of notes (as split by strsplit(., "+", fixed = TRUE))
-
-    ## We need to convert each row into a series of MIDI events. As a
-    ## first crude approximation, these can consist of NoteOn and NoteOff
-    ## (==NoteOn with 0 volume for simplicity) events. Each such event
-    ## needs to specify a key, volume (0 for note off) and time. For now,
-    ## we will count time incrementally (eventually we will record
-    ## delta-times in the MIDI file after suitable reordering).
-
-    ## We will produce a list for each row. The list will usually contain
-    ## at least 2 elements for each note in the row (on and off).
 
     ## Add cumulative time in notation data. Also drop initial - (which
     ## indicate tie or slur).
@@ -168,7 +157,7 @@ notation2freq <- function(id = "00032", notation_file = sprintf("notation/%s.csv
 
     ## which should be good enough. We could simplify slightly by
     ## combining the -1's with the previous note (as long as no meed
-    ## activity is happening, should in principle should not happen in
+    ## activity is happening, which in principle should not happen in
     ## such cases, but who knows, so better to check).
 
     ## Or, just ignore because it could be handled downstream if needed. 
@@ -200,32 +189,64 @@ notation2freq <- function(id = "00032", notation_file = sprintf("notation/%s.csv
 
 
 
+notation2freq <- function(id = "00032", notation_file = sprintf("notation/%s.csv", id), ...,
+                          AFREQ = 440, ## frequency of A=57
+                          L = 0.4, # tempo: duration in seconds of one 'note'
+                          A = 0.025 * L, # slur ascent --- see below
+                          digits = 2) # rounding for frequencies
+{
+    if (!file.exists(notation_file)) return(invisible())
+    dkeys <- notation2keys(id = id, notation_file = notation_file, ...)
+    freqs <- within(dkeys,
+    {
+        tmin <- min(tstart)
+        tstart <- L * (tstart - tmin) / 60
+        tend <- L * (tend - tmin) / 60
+        fstart <- AFREQ * 2^((kstart - 57) / 12)
+        fend <- AFREQ * 2^((kend - 57) / 12)
+        fstart <- round(fstart, digits)
+        fend <- round(fend, digits)
+    })[c("tstart", "tend", "fstart", "fend", "newnote")]
+
+    ## one practical problem is that discrete jumps in frequencies
+    ## always sound like a new note, regardless of of volume
+    ## profile. We can try to handle this as follows: for discrete
+    ## jumps that not new notes (slur), make the change continuous
+    ## over a small time interval in the past (duration=A).
+
+    ## To do this, we need to insert a new linear segment before each
+    ## row i with newnote==0, with tstart = tstart[i] - A, tend =
+    ## tstart[i], fstart = fend[i-1], fend = fstart[i], newnote =
+    ## 0. We also need to shorten the duration of the _previous_ row
+    ## by amount A.
+
+    ## It is difficult to insert rows efficiently, so instead we will
+    ## form the rows and then combine and sort by starting time
+
+    islur <- which(freqs$newnote == 0)
+    newSegments <-
+        with(freqs,
+             data.frame(tstart = tstart[islur] - 3 * A,
+                        tend = tstart[islur],
+                        fstart = fend[islur-1],
+                        fend = fstart[islur],
+                        newnote = 0))
+    freqs$tend[islur-1] <- freqs$tend[islur-1] - 3 * A
+    freqs <- rbind(freqs, newSegments) |> sort_by(~ tstart)
+
+    freqs
+}
+
+
+
 
 options(warn = 1)
 
-if (FALSE)
-{
 
-    notation2freq("01177") |> head(30)
-
-    notation2freq("01071") |> with(kend - kstart)
-
-    ## notation2midi("00004", instrument = "viola",
-    ##               maxvol = 120, speed = 1.2,
-    ##               file = "output.mid")
-
-
-    ## sanity check
-
-    from_midi("output.mid") |> split_midi() |> str()
-
-} else {
-
-    for (i in 1:3000) {
-        id <- sprintf("%05d", i)
-        print(id)
-        outfile <- sprintf("frequency-duration/%s.csv", id)
-        try(notation2freq(id) |> write.csv(file = outfile))
-    }
-
+for (i in 1:3000) {
+    id <- sprintf("%05d", i)
+    print(id)
+    outfile <- sprintf("freqmap/%s.csv", id)
+    try(notation2freq(id) |> write.csv(file = outfile, row.names = FALSE, quote = FALSE))
 }
+
