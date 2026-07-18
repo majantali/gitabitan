@@ -2,6 +2,19 @@ import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
 let audioCtx;
 
+
+export function pause_audio() {
+   if (audioCtx && audioCtx.state === 'running') {
+       audioCtx.suspend();
+   }
+}
+
+export function resume_audio() {
+   if (audioCtx && audioCtx.state === 'suspended') {
+       audioCtx.resume();
+   }
+}
+
 export async function play_audio(loc, instrument = 'flute') {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
