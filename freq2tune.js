@@ -1,25 +1,36 @@
 import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
+
+// NOTE: 'instrument' is not really to be taken seriously, they are
+// just proxies for the various waveforms available
+
 let audioCtx;
+let current_csv_loc;
 
-
-export function pause_audio() {
-   if (audioCtx && audioCtx.state === 'running') {
+export function toggle_audio(loc, instrument) {
+    // single button click to initiate play / pause / resume
+    if (!audioCtx || loc != current_csv_loc) {
+	current_csv_loc = loc;
+	play_audio(loc, instrument);
+    }
+    else if (audioCtx.state === 'running') {
        audioCtx.suspend();
-   }
-}
-
-export function resume_audio() {
-   if (audioCtx && audioCtx.state === 'suspended') {
+    }
+    else if (audioCtx.state === 'suspended') {
        audioCtx.resume();
    }
 }
 
-export async function play_audio(loc, instrument = 'flute') {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+export function stop_audio() {
+    if (audioCtx) {
+	audioCtx.close();
     }
-    
+}
+
+async function play_audio(loc, instrument = 'flute') {
+    if (audioCtx) { audioCtx.close(); }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
     // Fetch the CSV file
     const response = await fetch(loc);
     const csvText = await response.text();

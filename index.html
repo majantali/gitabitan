@@ -13,6 +13,7 @@
   body { font-family: 'Noto Sans Bengali', 'Noto Serif'; padding-top: 10px; }
   #songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: pre; padding: 10px; }
   .songtitle { color: rgb(100, 100, 255); cursor: pointer; }
+  #playbutton { cursor: pointer; font-size: 120%; }
 </style>
 </head>
 <body>
@@ -31936,11 +31937,11 @@ Selected song goes here
 
         </div>
       </div>
-      <div class='modal-footer'>
-	<audio id='noteogg' class='me-auto' controls src=''></audio>
-	<span onclick='aplay()'>Start</span>&nbsp;<span onclick='apause()'>Pause</span>&nbsp;<span onclick='aresume()'>Resume</span>
+      <div class='modal-footer justify-content-between'>
+	<!-- <audio id='noteogg' class='me-auto' controls src=''></audio> -->
+	<div id='noteogg'><span id='playbutton' onclick='aplay()'>⏯️</span></div>
 	<div id='notation'>Notation: 
-	    <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
+	  <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
         </div>
         <button type='button' class='btn btn-primary' data-bs-dismiss='modal'>Close</button>
       </div>
@@ -32004,7 +32005,7 @@ Selected song goes here
 	  document.getElementById('noteogg').style.display = 'block';
 	  document.getElementById('notecsv').href = 'https://github.com/majantali/gitabitan/blob/main/notation/' + id + '.csv';
 	  document.getElementById('notemidi').href = 'midi/' + id + '.mid';
-	  document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
+	  // document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
       }
       else {
 	  document.getElementById('notation').style.display = 'none';
@@ -32024,17 +32025,12 @@ Selected song goes here
 </script>
 
 <script type="module">
-  import { play_audio, pause_audio, resume_audio } from './freq2tune.js';
+  import { toggle_audio, stop_audio } from './freq2tune.js';
         
   window.aplay = function() {
-      play_audio('./freqmap/' + currentID + '.csv', 'guitar');
+      toggle_audio('./freqmap/' + currentID + '.csv', 'guitar');
   };
-  window.apause = function() {
-      pause_audio();
-  };
-  window.aresume = function() {
-      resume_audio();
-  };
+
 </script>
 
 
