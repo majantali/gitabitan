@@ -32,7 +32,16 @@ fillByPrev <- function(x, which.pos = x < 0)
 ## sounds. For slurring we will use Legato and see how different
 ## synthesizers deal with that.
 
-library(midiator) # only for key_indian map
+
+.note_map_indian <-
+    c("s" = 1, "R" = 2, "r" = 3, "G" = 4, "g" = 5, "m" = 6, "M" = 7,
+      "p" = 8, "D" = 9, "d" = 10, "N" = 11, "n" = 12)
+
+key_indian <- function(note, octave, offset = 0)
+{
+    key(.note_map_indian[note], octave, offset = offset)
+}
+
 
 
 ## note2events() handles one row in the original notation, producing
