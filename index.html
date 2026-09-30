@@ -1,4 +1,5 @@
-<html>
+<!doctype html>
+<html lang='bn'>
 <head>
 <meta charset='utf-8' />
 <title>Gitabitan Song List</title>
@@ -12,6 +13,7 @@
   body { font-family: 'Noto Sans Bengali', 'Noto Serif'; padding-top: 10px; }
   #songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: pre; padding: 10px; }
   .songtitle { color: rgb(100, 100, 255); cursor: pointer; }
+  #playbutton { cursor: pointer; font-size: 120%; }
 </style>
 </head>
 <body>
@@ -31935,10 +31937,11 @@ Selected song goes here
 
         </div>
       </div>
-      <div class='modal-footer'>
-	<audio id='noteogg' class='me-auto' controls src=''></audio>
+      <div class='modal-footer justify-content-between'>
+	<!-- <audio id='noteogg' class='me-auto' controls src=''></audio> -->
+	<div id='noteogg'><span id='playbutton' onclick='aplay()'>⏯️</span></div>
 	<div id='notation'>Notation: 
-	    <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
+	  <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
         </div>
         <button type='button' class='btn btn-primary' data-bs-dismiss='modal'>Close</button>
       </div>
@@ -31962,6 +31965,7 @@ Selected song goes here
 <script type='text/javascript'>
 
   var storedText;
+  var currentID;
 
   $(document).ready(function() {
       var search, songTable;
@@ -31994,13 +31998,14 @@ Selected song goes here
   }
 
   function displaySong(id, porjay, number, notation) {
+      currentID = id;
       document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
       if (notation) {
 	  document.getElementById('notation').style.display = 'inline';
 	  document.getElementById('noteogg').style.display = 'block';
 	  document.getElementById('notecsv').href = 'https://github.com/majantali/gitabitan/blob/main/notation/' + id + '.csv';
 	  document.getElementById('notemidi').href = 'midi/' + id + '.mid';
-	  document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
+	  // document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
       }
       else {
 	  document.getElementById('notation').style.display = 'none';
@@ -32017,6 +32022,14 @@ Selected song goes here
 	  });
   }
 
+</script>
+
+<script type="module">
+  import { toggle_audio, stop_audio } from './freq2tune.js';
+        
+  window.aplay = function() {
+      toggle_audio('./freqmap/' + currentID + '.csv', 'guitar');
+  };
 
 </script>
 
