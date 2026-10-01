@@ -113,8 +113,8 @@ Selected song goes here
 
         </div>
       </div>
-      <div class='modal-footer'>
-	<audio id='noteogg' class='me-auto' controls src=''></audio>
+      <div class='modal-footer justify-content-between'>
+	<div id='noteogg'><span id='playbutton' onclick='aplay()'>⏯️</span></div>
 	<div id='notation'>Notation: 
 	    <a id='notecsv' href='' target='_blank'>[CSV]</a>&nbsp;<a id='notemidi' href=''>[MIDI]</a>
         </div>
@@ -166,19 +166,21 @@ Selected song goes here
 
   } );
 
+  var currentID;
+
   function done() {
       document.getElementById('songarea').textContent = storedText;
       $('#songModal').modal('show');
   }
 
   function displaySong(id, porjay, number, notation) {
+      currentID = id;
       document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
       if (notation) {
 	  document.getElementById('notation').style.display = 'inline';
 	  document.getElementById('noteogg').style.display = 'block';
 	  document.getElementById('notecsv').href = 'https://github.com/majantali/gitabitan/blob/main/notation/' + id + '.csv';
 	  document.getElementById('notemidi').href = 'midi/' + id + '.mid';
-	  document.getElementById('noteogg').src = 'https://nlplab.isid.ac.in/gitabitan/ogg/' + id + '.ogg';
       }
       else {
 	  document.getElementById('notation').style.display = 'none';
@@ -196,6 +198,18 @@ Selected song goes here
   }
 
 
+</script>
+
+<script type='module'>
+  import { toggle_audio, stop_audio } from './freq2tune.js';
+
+  window.aplay = function() {
+      toggle_audio('./notation/' + currentID + '.csv', 'guitar', { AFREQ: 220 });
+  };
+
+  $('#songModal').on('hide.bs.modal', function () {
+      stop_audio();
+  });
 </script>
 
 ")

@@ -32028,9 +32028,13 @@ Selected song goes here
   import { toggle_audio, stop_audio } from './freq2tune.js';
         
   window.aplay = function() {
-      toggle_audio('./freqmap/' + currentID + '.csv', 'guitar');
+      toggle_audio('./notation/' + currentID + '.csv', 'guitar',
+		   { AFREQ: 220 });
   };
 
+  $('#songModal').on('hide.bs.modal', function () {
+      stop_audio();
+  });
 </script>
 
 
