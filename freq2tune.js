@@ -291,7 +291,8 @@ export function toggle_audio(loc, instrument = 'guitar', options = {}) {
         audioCtx.suspend();
     }
     else if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        // audioCtx.resume(); // FIXME for production
+        play_audio(loc, instrument, options); // for testing while updating CSV
     }
 }
 
@@ -321,7 +322,7 @@ export async function play_audio(loc, instrument = 'guitar', options = {}) {
     }
 
     // Fetch the CSV file
-    const response = await fetch(targetLoc);
+    const response = await fetch(targetLoc, { cache: "no-store" });
     if (!response.ok) {
         console.error(`Failed to fetch file from ${targetLoc}: ${response.statusText}`);
         return;
