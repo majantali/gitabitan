@@ -1,6 +1,6 @@
 # gitabitan / গীতবিতান
 
-This is a searchable copy Gitabitan along with related resources.
+This is a searchable copy of Gitabitan along with related resources.
 
 What you get:
 
