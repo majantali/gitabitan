@@ -83,11 +83,6 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "  .lyric-current { color: #0d6efd; font-weight: bold; transform: scale(1.15); background-color: #e7f1ff; border-radius: 4px; padding: 0 4px; }",
            "  .lyric-future { color: #212529; }",
            "  .lyric-elongation { opacity: 0.5; font-size: 0.9em; }",
-           "  body.modal-open { overflow-x: hidden; }",
-           "  @media (max-width: 767.98px) {",
-           "    .modal { width: 100vw; max-width: 100vw; }",
-           "    .modal-dialog { max-width: calc(100vw - 1rem); margin-left: auto; margin-right: auto; }",
-           "  }",
            "</style>",
            "</head>",
            "<body>",
@@ -217,7 +212,7 @@ Selected song goes here
       currentID = id;
       document.getElementById('songModalLabel').textContent = porjay + ' / ' + number;
       if (notation) {
-          console.log('Notation available');
+          // console.log('Notation available');
 	  document.getElementById('notation').style.display = 'inline';
 	  // document.getElementById('noteogg').style.display = 'flex';
           document.getElementById('noteogg').classList.remove('d-none');
@@ -226,7 +221,7 @@ Selected song goes here
 	  document.getElementById('notemidi').href = 'midi/' + id + '.mid';
       }
       else {
-          console.log('Notation not available');
+          // console.log('Notation not available');
 	  document.getElementById('notation').style.display = 'none';
 	  // document.getElementById('noteogg').style.display = 'none';
           document.getElementById('noteogg').classList.add('d-none');
