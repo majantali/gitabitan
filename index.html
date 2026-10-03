@@ -11,7 +11,22 @@
 <link rel='stylesheet' href='https://fonts.googleapis.com/earlyaccess/notosansbengali.css' >
 <style>
   body { font-family: 'Noto Sans Bengali', 'Noto Serif'; padding-top: 10px; }
-  .modal-content { background: #e5e5e5; }
+  #audioslider {
+    background-color: transparent;
+  }
+  #audioslider::-webkit-slider-runnable-track {
+    background-color: #adb5bd;
+    border: 1px solid #6c757d;
+    height: 0.5rem;
+    border-radius: 1rem;
+  }
+  #audioslider::-moz-range-track {
+    background-color: #adb5bd;
+    border: 1px solid #6c757d;
+    height: 0.5rem;
+    border-radius: 1rem;
+  }
+
   #songarea { font-family: 'Noto Sans Bengali', 'Noto Serif'; white-space: pre; padding: 10px; }
   .songtitle { color: rgb(100, 100, 255); cursor: pointer; }
   #playbutton { cursor: pointer; font-size: 150%; }

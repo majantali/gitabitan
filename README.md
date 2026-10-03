@@ -54,6 +54,9 @@ Javascript (using AI) so that the sound synthesis could work directly
 off the notation CSV file. This helps simplify the modify-test cycle;
 edits to the CSV file can be directly tested.
 
+Finally, a slider and a lyrics display window was added when the
+notation audio is being played (also with AI help).
+
 
 ## Editable Content
 
