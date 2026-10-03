@@ -83,6 +83,11 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
            "  .lyric-current { color: #0d6efd; font-weight: bold; transform: scale(1.15); background-color: #e7f1ff; border-radius: 4px; padding: 0 4px; }",
            "  .lyric-future { color: #212529; }",
            "  .lyric-elongation { opacity: 0.5; font-size: 0.9em; }",
+           "  body.modal-open { overflow-x: hidden; }",
+           "  @media (max-width: 767.98px) {",
+           "    .modal { width: 100vw; max-width: 100vw; }",
+           "    .modal-dialog { max-width: calc(100vw - 1rem); margin-left: auto; margin-right: auto; }",
+           "  }",
            "</style>",
            "</head>",
            "<body>",
@@ -125,11 +130,12 @@ export2htmltable <- function(s, file = "", append = !(file == ""))
     ## for (n in bncolnames) fwrite0("    <th>", "Search", "</th>")
     ## fwrite("</tr>", "</tfoot>")
 
-    fwrite("</table>")
+    fwrite("</table>",
+           "</div> <!-- container -->")
     fwrite("
 
 <div class='modal fade' id='songModal' tabindex='-1' aria-labelledby='songModalLabel' aria-hidden='true'>
-  <div class='modal-dialog modal-dialog-scrollable modal-lg'>
+  <div class='modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg'>
     <div class='modal-content'>
       <div class='modal-header'>
         <h1 class='modal-title fs-5' id='songModalLabel'>Song</h1>
@@ -161,10 +167,6 @@ Selected song goes here
     </div>
   </div>
 </div>
-
-
-
-</div> <!-- container -->
 
 <script src='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js'></script>
 <script src='https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.2.0/fh-4.0.1/datatables.min.js'></script>
@@ -343,6 +345,20 @@ Selected song goes here
   window.aplay = function() {
       toggle_audio('./notation/' + currentID + '.csv', 'guitar', { AFREQ: 220 });
   };
+
+  let savedScrollX = 0;
+  $('#songModal').on('show.bs.modal', function () {
+      savedScrollX = window.scrollX || window.pageXOffset || 0;
+      if (savedScrollX > 0) {
+          window.scrollTo(0, window.scrollY);
+      }
+  });
+
+  $('#songModal').on('hidden.bs.modal', function () {
+      if (savedScrollX > 0) {
+          window.scrollTo(savedScrollX, window.scrollY);
+      }
+  });
 
   $('#songModal').on('hide.bs.modal', function () {
       stop_audio();
