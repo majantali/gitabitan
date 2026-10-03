@@ -274,154 +274,288 @@ export function notation2freq(notationRows, options = {}) {
     return keys2freq(keys, options);
 }
 
+/**
+ * Extracts timestamped lyrics from notation rows based on note timing.
+ * Returns an array of tokens: [{ tstart, tend, text }]
+ */
+export function extractTimedLyrics(notationRows, options = {}) {
+    const NOTE_DURATION = options.NOTE_DURATION ?? 60;
+    const L = options.L ?? 0.4;
+    let currStart = 0;
+    let tmin = null;
+    const rawTokens = [];
 
-// NOTE: 'instrument' is not really to be taken seriously, they are
-// just proxies for the various waveforms available
-
-let audioCtx;
-let current_csv_loc;
-
-export function toggle_audio(loc, instrument = 'guitar', options = {}) {
-    // single button click to initiate play / pause / resume
-    if (!audioCtx || loc !== current_csv_loc || audioCtx.state === 'closed') {
-        current_csv_loc = loc;
-        play_audio(loc, instrument, options);
-    }
-    else if (audioCtx.state === 'running') {
-        audioCtx.suspend();
-    }
-    else if (audioCtx.state === 'suspended') {
-        // audioCtx.resume(); // FIXME for production
-        play_audio(loc, instrument, options); // for testing while updating CSV
-    }
-}
-
-export function stop_audio() {
-    if (audioCtx) {
-        audioCtx.close();
-        audioCtx = null;
-        current_csv_loc = null;
-    }
-}
-
-export async function play_audio(loc, instrument = 'guitar', options = {}) {
-    if (audioCtx) {
-        audioCtx.close();
-        audioCtx = null;
-    }
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    let targetLoc = loc;
-    if (typeof targetLoc === 'string') {
-        // If passed a bare ID like "00032", resolve to notation path
-        if (!targetLoc.includes('/') && !targetLoc.endsWith('.csv')) {
-            targetLoc = `./notation/${targetLoc}.csv`;
+    for (let i = 0; i < notationRows.length; i++) {
+        const row = notationRows[i];
+        const noteCountVal = parseInt(row.noteCount, 10);
+        if (!isNaN(noteCountVal) && noteCountVal > 0) {
+            currStart += NOTE_DURATION;
         }
-        // Redirect legacy freqmap or frequency-duration paths directly to notation folder
-        targetLoc = targetLoc.replace(/\/(freqmap|frequency-duration)\//, '/notation/');
+
+        const noteStr = (row.note !== undefined && row.note !== null ? String(row.note) : '').trim();
+        if (!noteStr || noteStr === '|' || noteStr.startsWith('⌶')) continue;
+
+        if (tmin === null) {
+            tmin = currStart;
+        }
+
+        const wordsStr = (row.words !== undefined && row.words !== null) ? String(row.words).trim() : '';
+        if (!wordsStr) continue;
+
+        const cleanNote = (noteStr !== '-' && noteStr.startsWith('-')) ? noteStr.replace(/-/g, '') : noteStr;
+        const notes = cleanNote.split('+');
+        const touchNotes = notes.map(n => n.startsWith('^'));
+        const n = touchNotes.filter(t => !t).length || 1;
+        const step = NOTE_DURATION / n;
+
+        const words = wordsStr.split(/\s+/);
+        if (words.length === n) {
+            for (let j = 0; j < n; j++) {
+                rawTokens.push({
+                    dstart: currStart + j * step,
+                    dstop: currStart + (j + 1) * step,
+                    text: words[j]
+                });
+            }
+        } else {
+            rawTokens.push({
+                dstart: currStart,
+                dstop: currStart + NOTE_DURATION,
+                text: wordsStr
+            });
+        }
     }
 
-    // Fetch the CSV file
-    const response = await fetch(targetLoc, { cache: "no-store" });
-    if (!response.ok) {
-        console.error(`Failed to fetch file from ${targetLoc}: ${response.statusText}`);
-        return;
+    if (tmin === null) tmin = 0;
+
+    return rawTokens.map(tok => ({
+        tstart: parseFloat((L * (tok.dstart - tmin) / 60).toFixed(3)),
+        tend: parseFloat((L * (tok.dstop - tmin) / 60).toFixed(3)),
+        text: tok.text
+    }));
+}
+
+
+// --- Audio playback, Seeking & Lyrics Window Engine ---
+
+let audioCtx = null;
+let current_csv_loc = null;
+let current_instrument = 'guitar';
+let current_options = {};
+let current_parsed_data = null;     // frequency-duration rows
+let current_timed_lyrics = [];      // [{ tstart, tend, text }]
+let current_total_duration = 0;     // seconds
+let current_seek_offset = 0;        // seconds
+let playback_start_time = 0;        // audioCtx.currentTime when oscillator started
+let update_timer_id = null;
+let current_osc = null;
+let current_master_gain = null;
+let playback_callback = null;
+
+/**
+ * Register a callback to receive real-time playback updates.
+ * Callback signature: fn({ currentTime, totalDuration, state, lyricsWindow })
+ */
+export function set_playback_callback(callback) {
+    playback_callback = callback;
+}
+
+export function get_current_time() {
+    if (!audioCtx || audioCtx.state !== 'running' || !current_osc) {
+        return current_seek_offset;
     }
-    const csvText = await response.text();
-    
-    // Parse the CSV
-    const parsed = Papa.parse(csvText, {
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true
+    const elapsed = audioCtx.currentTime - playback_start_time;
+    return Math.min(current_total_duration, current_seek_offset + elapsed);
+}
+
+export function get_total_duration() {
+    return current_total_duration;
+}
+
+export function get_timed_lyrics() {
+    return current_timed_lyrics;
+}
+
+/**
+ * Returns lyrics tokens within a window around currentTime.
+ * Default window: 3.5 seconds before, 4.5 seconds after.
+ */
+export function get_lyrics_window(currentTime, preSeconds = 3.5, postSeconds = 4.5) {
+    if (!current_timed_lyrics || current_timed_lyrics.length === 0) return [];
+
+    const windowStart = currentTime - preSeconds;
+    const windowEnd = currentTime + postSeconds;
+
+    return current_timed_lyrics
+        .filter(t => t.tend >= windowStart && t.tstart <= windowEnd)
+        .map(t => {
+            const isCurrent = (currentTime >= t.tstart && currentTime < t.tend);
+            const isPast = (t.tend <= currentTime);
+            const isElongation = (t.text === '৹');
+            return {
+                text: t.text,
+                display: t.text,
+                tstart: t.tstart,
+                tend: t.tend,
+                isCurrent,
+                isPast,
+                isFuture: !isCurrent && !isPast,
+                isElongation
+            };
+        });
+}
+
+function notify_callback(state) {
+    if (!playback_callback) return;
+    const curTime = get_current_time();
+    playback_callback({
+        currentTime: curTime,
+        totalDuration: current_total_duration,
+        state: state,
+        lyricsWindow: get_lyrics_window(curTime)
     });
-    
-    let data = parsed.data;
-    if (!data || data.length === 0) return;
+}
 
-    // If CSV is in notation format, convert directly to frequency-duration format
-    if (data[0] && (data[0].note !== undefined || data[0].onote !== undefined)) {
-        data = notation2freq(data, options);
+function stop_active_oscillator() {
+    if (update_timer_id) {
+        clearInterval(update_timer_id);
+        update_timer_id = null;
     }
+    if (current_osc) {
+        try {
+            current_osc.onended = null;
+            current_osc.stop();
+        } catch (e) {}
+        current_osc = null;
+    }
+}
 
-    if (!data || data.length === 0) return;
-    
-    // Ensure AudioContext is running
+/**
+ * Slices note events from targetTime onward, shifting timings so they schedule relative to targetTime.
+ */
+function slice_notes_for_seek(data, targetTime) {
+    const scheduled = [];
+    for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        if (row.tend <= targetTime) continue;
+
+        let fstart = row.fstart;
+        let fend = row.fend;
+        let tstart = row.tstart;
+        let tend = row.tend;
+        let newnote = row.newnote;
+
+        if (tstart < targetTime) {
+            // Note straddles seek point: interpolate frequency and clamp start
+            const duration = tend - tstart;
+            if (duration > 0) {
+                const fraction = (targetTime - tstart) / duration;
+                fstart = fstart + fraction * (fend - fstart);
+            }
+            tstart = targetTime;
+            newnote = 1; // start immediate attack for straddling note
+        }
+
+        const scheduledTstart = tstart - targetTime;
+        const scheduledTend = tend - targetTime;
+
+        scheduled.push({
+            scheduledTstart,
+            scheduledTend,
+            fstart,
+            fend,
+            newnote
+        });
+    }
+    return scheduled;
+}
+
+/**
+ * Starts oscillator playback from offsetTime.
+ */
+async function start_oscillator_at(offsetTime, instrument = current_instrument) {
+    stop_active_oscillator();
+
+    if (!audioCtx || audioCtx.state === 'closed') {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
     if (audioCtx.state === 'suspended') {
         await audioCtx.resume();
     }
-    
-    const startTime = audioCtx.currentTime + 0.1; // Add small delay to prevent immediate glitch
-    
+
+    if (!current_parsed_data || current_parsed_data.length === 0) return;
+
+    const notesToSchedule = slice_notes_for_seek(current_parsed_data, offsetTime);
+    if (notesToSchedule.length === 0) {
+        current_seek_offset = 0;
+        notify_callback('stopped');
+        return;
+    }
+
+    const startTime = audioCtx.currentTime + 0.05; // 50ms buffer to prevent audio glitch
+    playback_start_time = audioCtx.currentTime;
+    current_seek_offset = offsetTime;
+
     const masterGain = audioCtx.createGain();
     masterGain.connect(audioCtx.destination);
-    masterGain.gain.value = 0.5; // Avoid clipping
-    
-    // Set up instrument timbre
+    masterGain.gain.value = 0.5;
+    current_master_gain = masterGain;
+
     let type = 'triangle';
     if (instrument === 'flute') type = 'sine';
     if (instrument === 'guitar') type = 'triangle';
     if (instrument === 'violin') type = 'sawtooth';
     if (instrument === 'vocal') type = 'square';
-    
+
     const osc = audioCtx.createOscillator();
     osc.type = type;
-    
+
     const envelope = audioCtx.createGain();
     envelope.gain.value = 0;
-    
+
     osc.connect(envelope);
     envelope.connect(masterGain);
-    
-    osc.start(startTime);
-    
-    let lastTime = startTime;
-    
-    data.forEach((row, index) => {
-        if (row.tstart === undefined || row.tend === undefined || row.fstart === undefined || row.fend === undefined) {
-            return;
-        }
 
-        const tstart = row.tstart;
-        const tend = row.tend;
-        const fstart = row.fstart;
-        const fend = row.fend;
-        const newnote = row.newnote;
-        
-        const absoluteTstart = startTime + tstart;
-        const absoluteTend = startTime + tend;
-        
+    osc.start(startTime);
+    current_osc = osc;
+
+    let lastTime = startTime;
+
+    notesToSchedule.forEach((row, index) => {
+        const absoluteTstart = startTime + row.scheduledTstart;
+        const absoluteTend = startTime + row.scheduledTend;
+
         // Frequency scheduling
         if (absoluteTend > absoluteTstart) {
-            osc.frequency.setValueAtTime(fstart, absoluteTstart);
-            osc.frequency.linearRampToValueAtTime(fend, absoluteTend);
+            osc.frequency.setValueAtTime(row.fstart, absoluteTstart);
+            osc.frequency.linearRampToValueAtTime(row.fend, absoluteTend);
         } else {
-            osc.frequency.setValueAtTime(fend, absoluteTend);
+            osc.frequency.setValueAtTime(row.fend, absoluteTend);
         }
-        
+
         // Amplitude scheduling
-        if (newnote === 1) {
+        if (row.newnote === 1) {
             envelope.gain.setValueAtTime(0, absoluteTstart);
             envelope.gain.linearRampToValueAtTime(1, absoluteTstart + 0.05); // 50ms attack
         } else if (index === 0) {
             envelope.gain.setValueAtTime(1, absoluteTstart);
         }
-        
-        // Determine if we need to release the note
-        const isLast = index === data.length - 1;
+
+        // Release scheduling
+        const isLast = index === notesToSchedule.length - 1;
         let release = false;
-        
+
         if (isLast) {
             release = true;
         } else {
-            const nextRow = data[index + 1];
+            const nextRow = notesToSchedule[index + 1];
             if (nextRow.newnote === 1) {
                 release = true;
-            } else if (nextRow.tstart > tend + 0.001) { // gap in time
+            } else if (nextRow.scheduledTstart > row.scheduledTend + 0.001) {
                 release = true;
             }
         }
-        
+
         if (release) {
             const releaseStart = Math.max(absoluteTstart + 0.05, absoluteTend - 0.05);
             if (releaseStart < absoluteTend) {
@@ -429,17 +563,155 @@ export async function play_audio(loc, instrument = 'guitar', options = {}) {
                 envelope.gain.linearRampToValueAtTime(0, absoluteTend);
             }
         }
-        
+
         lastTime = Math.max(lastTime, absoluteTend);
     });
-    
+
     osc.onended = () => {
-        if (audioCtx && audioCtx.state !== 'closed') {
-            audioCtx.close();
-            audioCtx = null;
-            current_csv_loc = null;
-        }
+        stop_active_oscillator();
+        current_seek_offset = 0;
+        notify_callback('ended');
     };
 
     osc.stop(lastTime + 0.1);
+
+    // Start UI update interval (every 50ms)
+    update_timer_id = setInterval(() => {
+        const cur = get_current_time();
+        if (cur >= current_total_duration) {
+            stop_active_oscillator();
+            current_seek_offset = 0;
+            notify_callback('ended');
+        } else {
+            notify_callback('running');
+        }
+    }, 50);
+
+    notify_callback('running');
+}
+
+/**
+ * Loads CSV (if not already loaded) and starts playback from options.seekTime or 0.
+ */
+export async function play_audio(loc, instrument = 'guitar', options = {}) {
+    let targetLoc = loc;
+    if (typeof targetLoc === 'string') {
+        if (!targetLoc.includes('/') && !targetLoc.endsWith('.csv')) {
+            targetLoc = `./notation/${targetLoc}.csv`;
+        }
+        targetLoc = targetLoc.replace(/\/(freqmap|frequency-duration)\//, '/notation/');
+    }
+
+    current_instrument = instrument;
+    current_options = options;
+
+    // Fetch and parse CSV if new location or not yet loaded
+    if (targetLoc !== current_csv_loc || !current_parsed_data) {
+        stop_active_oscillator();
+
+        const response = await fetch(targetLoc, { cache: "no-store" });
+        if (!response.ok) {
+            console.error(`Failed to fetch file from ${targetLoc}: ${response.statusText}`);
+            return;
+        }
+        const csvText = await response.text();
+
+        const parsed = Papa.parse(csvText, {
+            header: true,
+            dynamicTyping: true,
+            skipEmptyLines: true
+        });
+
+        let data = parsed.data;
+        if (!data || data.length === 0) return;
+
+        if (data[0] && (data[0].note !== undefined || data[0].onote !== undefined)) {
+            current_parsed_data = notation2freq(data, options);
+            current_timed_lyrics = extractTimedLyrics(data, options);
+        } else {
+            current_parsed_data = data;
+            current_timed_lyrics = [];
+        }
+
+        current_csv_loc = targetLoc;
+        current_total_duration = current_parsed_data.length > 0 ? current_parsed_data[current_parsed_data.length - 1].tend : 0;
+        current_seek_offset = 0;
+    }
+
+    const startFrom = (options.seekTime !== undefined) ? options.seekTime : current_seek_offset;
+    await start_oscillator_at(startFrom, instrument);
+}
+
+/**
+ * Pauses playback while retaining the current position.
+ */
+export function pause_audio() {
+    if (!audioCtx) return;
+    const curTime = get_current_time();
+    current_seek_offset = curTime;
+    stop_active_oscillator();
+    if (audioCtx.state === 'running') {
+        audioCtx.suspend();
+    }
+    notify_callback('suspended');
+}
+
+/**
+ * Resumes playback from the current position.
+ */
+export async function resume_audio() {
+    if (!current_parsed_data || current_parsed_data.length === 0) {
+        if (current_csv_loc) {
+            await play_audio(current_csv_loc, current_instrument, current_options);
+        }
+        return;
+    }
+    await start_oscillator_at(current_seek_offset, current_instrument);
+}
+
+/**
+ * Seeks playback to a specific timestamp in seconds.
+ */
+export async function seek_audio(targetTime) {
+    if (!current_parsed_data || current_parsed_data.length === 0) return;
+    targetTime = Math.max(0, Math.min(targetTime, current_total_duration));
+    current_seek_offset = targetTime;
+
+    const isRunning = (audioCtx && audioCtx.state === 'running' && current_osc);
+    if (isRunning) {
+        await start_oscillator_at(targetTime, current_instrument);
+    } else {
+        notify_callback((audioCtx && audioCtx.state === 'suspended') ? 'suspended' : 'stopped');
+    }
+}
+
+/**
+ * Toggles playback between play, pause, and resume.
+ */
+export async function toggle_audio(loc, instrument = 'guitar', options = {}) {
+    if (!audioCtx || loc !== current_csv_loc || !current_parsed_data) {
+	// console.log("Playing " + loc + " after " + current_csv_loc);
+        await play_audio(loc, instrument, options);
+    }
+    else if (audioCtx.state === 'running' && current_osc) {
+	// console.log("Pausing" + current_csv_loc);
+        pause_audio();
+    }
+    else {
+	// console.log("Resuming" + current_csv_loc);
+        await resume_audio();
+    }
+}
+
+/**
+ * Completely stops playback and cleans up AudioContext.
+ */
+export function stop_audio() {
+    stop_active_oscillator();
+    if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+    }
+    current_seek_offset = 0;
+    notify_callback('stopped');
 }
