@@ -139,6 +139,7 @@ export function notation2keys(notationRows, NOTE_DURATION = 60) {
         }
 
         const noteStr = (row.note !== undefined && row.note !== null ? String(row.note) : '').trim();
+        const tie1 = (noteStr == '-');
         const slur1 = (noteStr !== '-') && noteStr.startsWith('-');
         const cleanNote = slur1 ? noteStr.replace(/-/g, '') : noteStr;
 
@@ -146,7 +147,7 @@ export function notation2keys(notationRows, NOTE_DURATION = 60) {
             note: cleanNote,
             words: (row.words !== undefined && row.words !== null) ? String(row.words) : '',
             start: currStart,
-            slur1: slur1,
+            slur1: slur1 || tie1,
             inmeed: inmeed
         });
     }

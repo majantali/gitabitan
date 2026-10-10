@@ -130,12 +130,17 @@ notation2keys <- function(id = "00032",
     {
         inmeed <- cumsum(meed == "BEGIN") - cumsum(meed == "END")
         start <- cumsum(NOTE_DURATION * (noteCount > 0))
-        ## Is first note a slur? ("-" means tie, not cosidered here)
+        ## Is first note a slur? ("-" means tie, not technically a
+        ## slur because note does not change. But in the fixed-time
+        ## akar-matric notation, we will treat this as a slur
+        tie1 <- (note == "-")
         ## --- other notes in a multi-note note can be slurs as well,
         ## but that is indicated in the lyrics.
         slur1 <- (note != "-") & startsWith(note, "-") # can we have - in the middle?
         note[slur1] <- gsub("-", "", note[slur1]) # drop the now reduntant hyphen
         ## Further slurs based on lyrics are added by note2events() in the call below
+        slur1 <- slur1 | tie1
+
     })
 
     noteCodes <- 
